@@ -1,56 +1,19 @@
-"""
-Конфигурация бота.
-
-ИНСТРУКЦИЯ ПО ЗАПОЛНЕНИЮ:
-──────────────────────────────────────────────
-1. BOT_TOKEN — получите у @BotFather в Telegram:
-   - Напишите /newbot
-   - Следуйте инструкциям
-   - Скопируйте токен вида: 123456:ABC-DEF1234...
-
-2. ADMIN_CHAT_ID — ваш Telegram ID:
-   - Напишите боту @userinfobot
-   - Он покажет ваш числовой ID
-   - Можно оставить None, чтобы отключить уведомления
-
-3. GOOGLE_CREDENTIALS_FILE — путь к JSON-ключу сервисного аккаунта:
-   - Откройте console.cloud.google.com
-   - Создайте проект → IAM → Сервисные аккаунты
-   - Создайте аккаунт → Ключи → Добавить ключ → JSON
-   - Скачайте файл и укажите путь ниже
-
-4. SPREADSHEET_ID — ID вашей Google Таблицы:
-   - Откройте таблицу в браузере
-   - URL вида: docs.google.com/spreadsheets/d/ЭТОТ_ID/edit
-   - Скопируйте ЭТОТ_ID
-
-5. Дайте доступ сервисному аккаунту к таблице:
-   - В таблице: Настройки доступа → Добавить
-   - Email сервисного аккаунта (из JSON файла, поле "client_email")
-   - Роль: Редактор
-──────────────────────────────────────────────
-"""
+import os
 
 # ========================
 # Telegram
 # ========================
 
-# Токен бота от @BotFather
-BOT_TOKEN = "8737224207:AAHx300gJLPIVCVkV6BcqUo5Q1vGNKwqRbE"
+BOT_TOKEN = os.environ.get("BOT_TOKEN", "8737224207:AAHup29K4Em6ypdbWfWQq1kdL9VY1kZ_qRY")
 
-# Chat ID администратора для уведомлений о новых заявках
-# Установите None чтобы отключить уведомления
-ADMIN_CHAT_ID = None  # Пример: 123456789
+ADMIN_CHAT_ID = None
 
 # ========================
 # Google Sheets
 # ========================
 
-# Путь к JSON файлу с ключами сервисного аккаунта
 GOOGLE_CREDENTIALS_FILE = "credentials.json"
 
-# ID Google Таблицы (из URL)
 SPREADSHEET_ID = "1ZGR8581dQu-rhvgnOBJ0AaIOqN6z-PKapZSa_k2qRkU"
 
-# Название листа в таблице
 SHEET_NAME = "Реестр автомобилей"

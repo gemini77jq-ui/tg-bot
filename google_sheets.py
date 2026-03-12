@@ -4,10 +4,12 @@
 """
 
 import logging
+import json
+import os
 from typing import Optional
 import gspread
 from google.oauth2.service_account import Credentials
-from config import GOOGLE_CREDENTIALS_FILE, SPREADSHEET_ID, SHEET_NAME
+from config import SPREADSHEET_ID, SHEET_NAME
 
 logger = logging.getLogger(__name__)
 
@@ -38,8 +40,14 @@ class GoogleSheetsManager:
     def _connect(self) -> bool:
         """Подключение к Google Sheets."""
         try:
-            creds = Credentials.from_service_account_file(
-                GOOGLE_CREDENTIALS_FILE, scopes=SCOPES
+            credentials_json = os.environ.get("GOOGLE_CREDENTIALS")
+            if not credentials_json:
+                logger.error("Переменная GOOGLE_CREDENTIALS не найдена")
+                return False
+
+            credentials_dict = json.loads(credentials_json)
+            creds = Credentials.from_service_account_info(
+                credentials_dict, scopes=SCOPES
             )
             self._client = gspread.authorize(creds)
             spreadsheet = self._client.open_by_key(SPREADSHEET_ID)

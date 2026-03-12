@@ -110,7 +110,7 @@ class GoogleSheetsManager:
                 record["status"],
             ]
             self._sheet.append_row(row, value_input_option="USER_ENTERED")
-            logger.info(f"Запись добавлена: {record['car_number']} — {record['full_name']}")
+            logger.info(f"Запись добавлена: {record['car_number']}")
             return True
         except Exception as e:
             logger.error(f"Ошибка добавления записи: {e}")

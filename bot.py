@@ -6,6 +6,7 @@ Telegram бот для регистрации автомобилей на тер
 import logging
 import re
 from datetime import datetime
+from zoneinfo import ZoneInfo
 from telegram import Update, ReplyKeyboardMarkup, ReplyKeyboardRemove
 from telegram.ext import (
     Application,
@@ -57,7 +58,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     logger.info(f"Пользователь {user.id} ({user.username}) начал регистрацию")
 
     await update.message.reply_text(
-        f"👋 Добро пожаловать, {user.first_name}!\n\n"
+        f"👋 Приветствуем Вас!\n\n"
         "🚗 Этот бот поможет зарегистрировать ваш автомобиль для въезда на территорию.\n\n"
         "Пожалуйста, заполните данные. Это займёт около минуты.\n\n"
         "📱 *Шаг 1 из 4* — Введите номер телефона:",
@@ -187,7 +188,7 @@ async def confirm(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
 
     # Запись в таблицу
     record = {
-        "timestamp": datetime.now().strftime("%d.%m.%Y %H:%M"),
+        "timestamp": datetime.now(ZoneInfo("Europe/Moscow")).strftime("%d.%m.%Y %H:%M"),
         "tg_id": str(user.id),
         "tg_username": f"@{user.username}" if user.username else "—",
         "phone": data["phone"],
@@ -202,7 +203,9 @@ async def confirm(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     if success:
         await update.message.reply_text(
             "✅ *Заявка успешно отправлена!*\n\n"
-            f"🔢 Ваш номер авто: `{data['car_number']}`\n\n"
+            f"🚗 Автомобиль: {data['car_brand']} {data['car_model']}\n"
+            f"🔢 Гос. номер: `{data['car_number']}`\n"
+            f"📅 Дата: {record['timestamp']}\n\n"
             "Администратор рассмотрит заявку и сообщит о решении.\n\n"
             "Для новой регистрации введите /start",
             parse_mode="Markdown",

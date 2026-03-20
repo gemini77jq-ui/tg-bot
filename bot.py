@@ -31,7 +31,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # Шаги диалога
-PHONE, CAR_BRAND, CAR_MODEL, CAR_NUMBER, CONFIRM = range(5)
+CAR_BRAND, CAR_NUMBER, ARRIVAL_DATE, ARRIVAL_TIME, TEAM, CONFIRM = range(6)
 
 # Кнопки подтверждения
 CONFIRM_KEYBOARD = ReplyKeyboardMarkup(
@@ -46,10 +46,19 @@ def format_car_number(number: str) -> str:
     return number.strip().upper()
 
 
-def is_valid_phone(phone: str) -> bool:
-    """Проверяет базовый формат телефонного номера."""
-    cleaned = re.sub(r"[\s\-\(\)]", "", phone)
-    return bool(re.match(r"^[\+7|8]?\d{10,11}$", cleaned))
+def is_valid_date(date_str: str) -> bool:
+    """Проверяет формат даты ДД.ММ.ГГГГ."""
+    try:
+        datetime.strptime(date_str.strip(), "%d.%m.%Y")
+        return True
+    except ValueError:
+        return False
+
+
+def is_valid_time_range(time_str: str) -> bool:
+    """Проверяет формат диапазона времени ЧЧ:ММ - ЧЧ:ММ."""
+    pattern = r"^\d{1,2}:\d{2}\s*-\s*\d{1,2}:\d{2}$"
+    return bool(re.match(pattern, time_str.strip()))
 
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
@@ -61,29 +70,10 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
         f"👋 Приветствуем Вас!\n\n"
         "🚗 Этот бот поможет зарегистрировать ваш автомобиль для въезда на территорию.\n\n"
         "Пожалуйста, заполните данные. Это займёт около минуты.\n\n"
-        "📱 *Шаг 1 из 4* — Введите номер телефона:",
-        parse_mode="Markdown",
-        reply_markup=ReplyKeyboardRemove(),
-    )
-    return PHONE
-
-
-async def get_phone(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    """Получение телефона."""
-    phone = update.message.text.strip()
-
-    if not is_valid_phone(phone):
-        await update.message.reply_text(
-            "⚠️ Неверный формат номера. Введите номер в формате:\n"
-            "+7XXXXXXXXXX или 8XXXXXXXXXX"
-        )
-        return PHONE
-
-    context.user_data["phone"] = phone
-    await update.message.reply_text(
-        f"✅ Телефон: *{phone}*\n\n🚗 *Шаг 2 из 4* — Введите марку автомобиля:\n"
+        "🚗 *Шаг 1 из 5* — Введите марку автомобиля:\n"
         "_Пример: Toyota, BMW, Lada_",
         parse_mode="Markdown",
+        reply_markup=ReplyKeyboardRemove(),
     )
     return CAR_BRAND
 
@@ -98,24 +88,7 @@ async def get_car_brand(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
 
     context.user_data["car_brand"] = brand.title()
     await update.message.reply_text(
-        f"✅ Марка: *{brand.title()}*\n\n🚗 *Шаг 3 из 4* — Введите модель автомобиля:\n"
-        "_Пример: Camry, X5, Vesta_",
-        parse_mode="Markdown",
-    )
-    return CAR_MODEL
-
-
-async def get_car_model(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    """Получение модели авто."""
-    model = update.message.text.strip()
-
-    if len(model) < 1:
-        await update.message.reply_text("⚠️ Введите корректное название модели:")
-        return CAR_MODEL
-
-    context.user_data["car_model"] = model.title()
-    await update.message.reply_text(
-        f"✅ Модель: *{model.title()}*\n\n🔢 *Шаг 4 из 4* — Введите гос. номер автомобиля:\n"
+        f"✅ Марка: *{brand.title()}*\n\n🔢 *Шаг 2 из 5* — Введите гос. номер автомобиля:\n"
         "_Пример: А123БВ777_",
         parse_mode="Markdown",
     )
@@ -123,7 +96,7 @@ async def get_car_model(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
 
 
 async def get_car_number(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    """Получение гос. номера и показ итоговой формы."""
+    """Получение гос. номера."""
     number = format_car_number(update.message.text)
 
     if len(number) < 4:
@@ -133,14 +106,75 @@ async def get_car_number(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         return CAR_NUMBER
 
     context.user_data["car_number"] = number
+    await update.message.reply_text(
+        f"✅ Гос. номер: `{number}`\n\n📅 *Шаг 3 из 5* — Введите дату прибытия:\n"
+        "_Формат: ДД.ММ.ГГГГ, например 25.06.2025_",
+        parse_mode="Markdown",
+    )
+    return ARRIVAL_DATE
 
-    # Итоговая сводка
+
+async def get_arrival_date(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Получение даты прибытия."""
+    date_str = update.message.text.strip()
+
+    if not is_valid_date(date_str):
+        await update.message.reply_text(
+            "⚠️ Неверный формат даты. Введите в формате ДД.ММ.ГГГГ:\n"
+            "_Пример: 25.06.2025_",
+            parse_mode="Markdown",
+        )
+        return ARRIVAL_DATE
+
+    context.user_data["arrival_date"] = date_str.strip()
+    await update.message.reply_text(
+        f"✅ Дата прибытия: *{date_str.strip()}*\n\n"
+        "⏰ *Шаг 4 из 5* — Введите диапазон времени пребывания:\n"
+        "_Формат: ЧЧ:ММ - ЧЧ:ММ, например 09:00 - 18:00_",
+        parse_mode="Markdown",
+    )
+    return ARRIVAL_TIME
+
+
+async def get_arrival_time(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Получение диапазона времени пребывания."""
+    time_str = update.message.text.strip()
+
+    if not is_valid_time_range(time_str):
+        await update.message.reply_text(
+            "⚠️ Неверный формат. Введите диапазон времени:\n"
+            "_Формат: ЧЧ:ММ - ЧЧ:ММ, например 09:00 - 18:00_",
+            parse_mode="Markdown",
+        )
+        return ARRIVAL_TIME
+
+    context.user_data["arrival_time"] = time_str
+    await update.message.reply_text(
+        f"✅ Время пребывания: *{time_str}*\n\n"
+        "🏒 *Шаг 5 из 5* — Введите название команды или школы:",
+        parse_mode="Markdown",
+    )
+    return TEAM
+
+
+async def get_team(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Получение названия команды/школы и показ итоговой формы."""
+    team = update.message.text.strip()
+
+    if len(team) < 2:
+        await update.message.reply_text("⚠️ Введите корректное название команды или школы:")
+        return TEAM
+
+    context.user_data["team"] = team
+
     data = context.user_data
     summary = (
         "📋 *Проверьте введённые данные:*\n\n"
-        f"📱 Телефон: {data['phone']}\n"
-        f"🚗 Автомобиль: {data['car_brand']} {data['car_model']}\n"
-        f"🔢 Гос. номер: `{data['car_number']}`\n\n"
+        f"🚗 Марка: {data['car_brand']}\n"
+        f"🔢 Гос. номер: `{data['car_number']}`\n"
+        f"📅 Дата прибытия: {data['arrival_date']}\n"
+        f"⏰ Время пребывания: {data['arrival_time']}\n"
+        f"🏒 Команда/Школа: {data['team']}\n\n"
         "Всё верно?"
     )
 
@@ -171,7 +205,6 @@ async def confirm(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
         )
         return CONFIRM
 
-    # Сохраняем данные
     sheets = GoogleSheetsManager()
     user = update.effective_user
     data = context.user_data
@@ -186,15 +219,15 @@ async def confirm(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
         )
         return ConversationHandler.END
 
-    # Запись в таблицу
     record = {
         "timestamp": datetime.now(ZoneInfo("Europe/Moscow")).strftime("%d.%m.%Y %H:%M"),
         "tg_id": str(user.id),
         "tg_username": f"@{user.username}" if user.username else "—",
-        "phone": data["phone"],
         "car_brand": data["car_brand"],
-        "car_model": data["car_model"],
         "car_number": data["car_number"],
+        "arrival_date": data["arrival_date"],
+        "arrival_time": data["arrival_time"],
+        "team": data["team"],
         "status": "Ожидает одобрения",
     }
 
@@ -203,23 +236,26 @@ async def confirm(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     if success:
         await update.message.reply_text(
             "✅ *Заявка успешно отправлена!*\n\n"
-            f"🚗 Автомобиль: {data['car_brand']} {data['car_model']}\n"
+            f"🚗 Марка: {data['car_brand']}\n"
             f"🔢 Гос. номер: `{data['car_number']}`\n"
-            f"📅 Дата: {record['timestamp']}\n\n"
+            f"📅 Дата прибытия: {data['arrival_date']}\n"
+            f"⏰ Время пребывания: {data['arrival_time']}\n"
+            f"🏒 Команда/Школа: {data['team']}\n\n"
             "Администратор рассмотрит заявку и сообщит о решении.\n\n"
             "Для новой регистрации введите /start",
             parse_mode="Markdown",
             reply_markup=ReplyKeyboardRemove(),
         )
 
-        # Уведомление администратору
         if ADMIN_CHAT_ID:
             admin_msg = (
                 "🔔 *Новая заявка на въезд!*\n\n"
-                f"📱 {record['phone']}\n"
-                f"🚗 {record['car_brand']} {record['car_model']}\n"
+                f"🚗 {record['car_brand']}\n"
                 f"🔢 `{record['car_number']}`\n"
-                f"📅 {record['timestamp']}\n"
+                f"📅 Дата прибытия: {record['arrival_date']}\n"
+                f"⏰ Время: {record['arrival_time']}\n"
+                f"🏒 Команда/Школа: {record['team']}\n"
+                f"📅 Зарегистрирован: {record['timestamp']}\n"
                 f"🆔 TG: {record['tg_username']} (ID: {record['tg_id']})"
             )
             try:
@@ -268,14 +304,14 @@ def main():
     """Запуск бота."""
     app = Application.builder().token(BOT_TOKEN).build()
 
-    # Диалог регистрации
     conv_handler = ConversationHandler(
         entry_points=[CommandHandler("start", start)],
         states={
-            PHONE: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_phone)],
             CAR_BRAND: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_car_brand)],
-            CAR_MODEL: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_car_model)],
             CAR_NUMBER: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_car_number)],
+            ARRIVAL_DATE: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_arrival_date)],
+            ARRIVAL_TIME: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_arrival_time)],
+            TEAM: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_team)],
             CONFIRM: [MessageHandler(filters.TEXT & ~filters.COMMAND, confirm)],
         },
         fallbacks=[CommandHandler("cancel", cancel)],

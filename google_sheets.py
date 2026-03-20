@@ -13,7 +13,6 @@ from config import SPREADSHEET_ID, SHEET_NAME
 
 logger = logging.getLogger(__name__)
 
-# Права доступа к Google API
 SCOPES = [
     "https://www.googleapis.com/auth/spreadsheets",
     "https://www.googleapis.com/auth/drive",
@@ -21,13 +20,14 @@ SCOPES = [
 
 # Заголовки таблицы (порядок важен!)
 HEADERS = [
-    "Дата и время",
+    "Дата регистрации",
     "TG ID",
     "TG Username",
-    "Телефон",
     "Марка",
-    "Модель",
     "Гос. номер",
+    "Дата прибытия",
+    "Время пребывания",
+    "Команда/Школа",
     "Статус",
 ]
 
@@ -52,7 +52,6 @@ class GoogleSheetsManager:
             self._client = gspread.authorize(creds)
             spreadsheet = self._client.open_by_key(SPREADSHEET_ID)
 
-            # Получаем лист или создаём новый
             try:
                 self._sheet = spreadsheet.worksheet(SHEET_NAME)
             except gspread.WorksheetNotFound:
@@ -60,10 +59,11 @@ class GoogleSheetsManager:
                     title=SHEET_NAME, rows=1000, cols=len(HEADERS)
                 )
                 self._setup_headers()
+                return True
 
-            # Проверяем/создаём заголовки
+            # Обновляем заголовки если не совпадают
             existing = self._sheet.row_values(1)
-            if not existing:
+            if existing != HEADERS:
                 self._setup_headers()
 
             return True
@@ -75,9 +75,8 @@ class GoogleSheetsManager:
         """Устанавливает заголовки таблицы."""
         try:
             self._sheet.update("A1", [HEADERS])
-            # Форматирование заголовков (жирный)
             self._sheet.format(
-                "A1:H1",
+                f"A1:{chr(64 + len(HEADERS))}1",
                 {
                     "textFormat": {"bold": True},
                     "backgroundColor": {"red": 0.2, "green": 0.6, "blue": 1.0},
@@ -90,10 +89,10 @@ class GoogleSheetsManager:
     def add_record(self, record: dict) -> bool:
         """
         Добавляет запись в таблицу.
-        
+
         record должен содержать ключи:
-        timestamp, tg_id, tg_username, full_name, phone,
-        car_brand, car_model, car_number, status
+        timestamp, tg_id, tg_username, car_brand, car_number,
+        arrival_date, arrival_time, team, status
         """
         if not self._connect():
             return False
@@ -103,10 +102,11 @@ class GoogleSheetsManager:
                 record["timestamp"],
                 record["tg_id"],
                 record["tg_username"],
-                record["phone"],
                 record["car_brand"],
-                record["car_model"],
                 record["car_number"],
+                record["arrival_date"],
+                record["arrival_time"],
+                record["team"],
                 record["status"],
             ]
             self._sheet.append_row(row, value_input_option="USER_ENTERED")
@@ -119,23 +119,21 @@ class GoogleSheetsManager:
     def is_duplicate(self, car_number: str) -> bool:
         """
         Проверяет, зарегистрирован ли уже автомобиль с таким номером.
-        Столбец 'Гос. номер' — индекс 8 (H).
+        Гос. номер — столбец E (индекс 5).
         """
         if not self._connect():
             return False
 
         try:
-            # Получаем все номера из столбца H (индекс 8)
-            all_numbers = self._sheet.col_values(7)  # 1-based индекс
-            # Пропускаем заголовок и нормализуем
+            all_numbers = self._sheet.col_values(5)  # столбец E
             registered = [n.strip().upper() for n in all_numbers[1:] if n]
             return car_number.upper() in registered
         except Exception as e:
             logger.error(f"Ошибка проверки дубликата: {e}")
-            return False  # При ошибке разрешаем регистрацию
+            return False
 
     def get_all_records(self) -> list:
-        """Возвращает все записи из таблицы (для отладки/admin)."""
+        """Возвращает все записи из таблицы."""
         if not self._connect():
             return []
 

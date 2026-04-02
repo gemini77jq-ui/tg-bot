@@ -69,7 +69,7 @@ def set_cell_border(cell):
     for edge in ["top", "bottom", "left", "right"]:
         el = tcBorders.makeelement(
             qn(f"w:{edge}"),
-            {"w:val": "single", "w:sz": "4", "w:space": "0", "w:color": "000000"},
+            {qn("w:val"): "single", qn("w:sz"): "4", qn("w:space"): "0", qn("w:color"): "000000"},
         )
         tcBorders.append(el)
 

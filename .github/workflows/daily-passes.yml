@@ -1,0 +1,30 @@
+name: Daily Passes Generator
+
+on:
+  schedule:
+    # 20:30 UTC = 23:30 MSK
+    - cron: '30 20 * * *'
+  workflow_dispatch:
+
+jobs:
+  generate-and-send:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Generate passes and send to Telegram
+        env:
+          GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
+          BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
+          RECIPIENT_CHAT_ID: ${{ secrets.RECIPIENT_CHAT_ID }}
+          SPREADSHEET_ID: ${{ secrets.SPREADSHEET_ID }}
+        run: python generate_passes.py

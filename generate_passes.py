@@ -1,6 +1,9 @@
 """
 Автоматическая генерация разовых пропусков и отправка в Telegram.
 Запускается ежедневно в 23:30 МСК через GitHub Actions.
+Генерирует два документа:
+1. Официальное письмо в ГБУ «Мосприрода»
+2. Перечень автомобилей (простая таблица)
 """
 
 import json
@@ -25,7 +28,7 @@ from num_to_words import number_to_genitive
 SPREADSHEET_ID = os.environ.get("SPREADSHEET_ID", "1ZGR8581dQu-rhvgnOBJ0AaIOqN6z-PKapZSa_k2qRkU")
 SHEET_NAME = "Реестр автомобилей"
 BOT_TOKEN = os.environ.get("BOT_TOKEN", "")
-RECIPIENT_CHAT_ID = os.environ.get("RECIPIENT_CHAT_ID", "5621135995")
+RECIPIENT_CHAT_ID = os.environ.get("RECIPIENT_CHAT_ID", "-5265944992")
 TIMEZONE = ZoneInfo("Europe/Moscow")
 SCOPES = [
     "https://www.googleapis.com/auth/spreadsheets.readonly",
@@ -75,7 +78,7 @@ def set_cell_border(cell):
 
 
 def generate_document(cars, target_date_str):
-    """Генерирует Word-документ с разовыми пропусками."""
+    """Генерирует Word-документ с официальным письмом."""
     target_date = datetime.strptime(target_date_str, "%d.%m.%Y")
     doc_date = datetime.now(TIMEZONE)
     doc_number = doc_date.strftime("%d-%m/%y")
@@ -89,16 +92,16 @@ def generate_document(cars, target_date_str):
     style.font.size = Pt(12)
 
     p = doc.add_paragraph()
-    run = p.add_run(f"{doc_date_fmt}. \u2116 {doc_number}")
+    run = p.add_run(f"{doc_date_fmt}. № {doc_number}")
     run.font.size = Pt(12)
 
     p = doc.add_paragraph()
-    run = p.add_run("\u041d\u0430 \u2116________ \u043e\u0442________")
+    run = p.add_run("На №________ от________")
     run.font.size = Pt(12)
 
     doc.add_paragraph()
 
-    for text in ["\u0413\u0435\u043d\u0435\u0440\u0430\u043b\u044c\u043d\u043e\u043c\u0443 \u0434\u0438\u0440\u0435\u043a\u0442\u043e\u0440\u0443", "\u0413\u0411\u0423 \u00ab\u041c\u043e\u0441\u043f\u0440\u0438\u0440\u043e\u0434\u0430\u00bb"]:
+    for text in ["Генеральному директору", "ГБУ «Мосприрода»"]:
         p = doc.add_paragraph()
         p.alignment = WD_ALIGN_PARAGRAPH.RIGHT
         run = p.add_run(text)
@@ -109,7 +112,7 @@ def generate_document(cars, target_date_str):
 
     p = doc.add_paragraph()
     p.alignment = WD_ALIGN_PARAGRAPH.RIGHT
-    run = p.add_run("\u0410\u0434\u0438\u0433\u0430\u043c\u043e\u0432\u043e\u0439 \u042e.\u0418.")
+    run = p.add_run("Адигамовой Ю.И.")
     run.bold = True
     run.font.size = Pt(12)
 
@@ -117,7 +120,7 @@ def generate_document(cars, target_date_str):
 
     p = doc.add_paragraph()
     p.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    run = p.add_run("\u0423\u0432\u0430\u0436\u0430\u0435\u043c\u0430\u044f \u042e\u043b\u0438\u044f \u0418\u043b\u044c\u0434\u0443\u0441\u043e\u0432\u043d\u0430!")
+    run = p.add_run("Уважаемая Юлия Ильдусовна!")
     run.bold = True
     run.font.size = Pt(12)
 
@@ -125,21 +128,21 @@ def generate_document(cars, target_date_str):
     doc.add_paragraph()
 
     p = doc.add_paragraph()
-    run = p.add_run("\u0412 \u0440\u0430\u043c\u043a\u0430\u0445 \u0440\u0430\u043d\u0435\u0435 \u043d\u0430\u043f\u0440\u0430\u0432\u043b\u0435\u043d\u043d\u043e\u0433\u043e \u043e\u0431\u0440\u0430\u0449\u0435\u043d\u0438\u044f \u0410\u041d\u041e \u0421\u041a \u00ab\u041e\u043b\u0438\u043c\u043f\u0438\u043a\u00bb \u043e\u0442 11.03.2026 \u2116 11-03/26,")
+    run = p.add_run("В рамках ранее направленного обращения АНО СК «Олимпик» от 11.03.2026 № 11-03/26,")
     run.font.size = Pt(12)
 
     p = doc.add_paragraph()
     p.paragraph_format.line_spacing = 1.15
     p.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
     run = p.add_run(
-        "\u0432 \u0441\u043e\u043e\u0442\u0432\u0435\u0442\u0441\u0442\u0432\u0438\u0438 \u0441 \u0434\u043e\u0433\u043e\u0432\u043e\u0440\u043e\u043c \u0430\u0440\u0435\u043d\u0434\u044b \u043e\u0431\u044a\u0435\u043a\u0442\u0430 \u043e\u0441\u043e\u0431\u043e \u0446\u0435\u043d\u043d\u043e\u0433\u043e \u0434\u0432\u0438\u0436\u0438\u043c\u043e\u0433\u043e \u0438\u043c\u0443\u0449\u0435\u0441\u0442\u0432\u0430 "
-        "\u2116 \u041e\u0426\u0414\u0418-17, \u0437\u0430\u043a\u043b\u044e\u0447\u0435\u043d\u043d\u044b\u043c \u043c\u0435\u0436\u0434\u0443 \u0413\u041f\u0411\u0423 \u00ab\u041c\u043e\u0441\u043f\u0440\u0438\u0440\u043e\u0434\u0430\u00bb \u0438 \u0410\u0432\u0442\u043e\u043d\u043e\u043c\u043d\u043e\u0439 \u043d\u0435\u043a\u043e\u043c\u043c\u0435\u0440\u0447\u0435\u0441\u043a\u043e\u0439 "
-        "\u041e\u0440\u0433\u0430\u043d\u0438\u0437\u0430\u0446\u0438\u0435\u0439 \u0421\u043f\u043e\u0440\u0442\u0438\u0432\u043d\u044b\u0439 \u043a\u043b\u0443\u0431 \u00ab\u041e\u043b\u0438\u043c\u043f\u0438\u043a\u00bb (\u041e\u0413\u0420\u041d 1047796891570) 01.08.2018 \u0433., "
-        "\u0432 \u0446\u0435\u043b\u044f\u0445 \u0432\u044b\u043f\u043e\u043b\u043d\u0435\u043d\u0438\u044f \u0440\u0430\u0437\u043e\u0432\u044b\u0445 \u043e\u0431\u044f\u0437\u0430\u0442\u0435\u043b\u044c\u0441\u0442\u0432, \u043f\u0440\u043e\u0448\u0443 \u0412\u0430\u0441 \u0434\u0430\u0442\u044c \u0440\u0430\u0437\u043e\u0432\u044b\u0435 \u0440\u0430\u0437\u0440\u0435\u0448\u0435\u043d\u0438\u0435 \u043d\u0430 "
-        "\u0432\u044a\u0435\u0437\u0434 \u0442\u0440\u0430\u043d\u0441\u043f\u043e\u0440\u0442\u043d\u044b\u0445 \u0441\u0440\u0435\u0434\u0441\u0442\u0432 \u043d\u0430 \u043e\u0441\u043e\u0431\u043e \u043e\u0445\u0440\u0430\u043d\u044f\u0435\u043c\u0443\u044e \u0437\u0435\u043b\u0435\u043d\u0443\u044e \u0442\u0435\u0440\u0440\u0438\u0442\u043e\u0440\u0438\u044e \u043b\u0430\u043d\u0434\u0448\u0430\u0444\u0442\u043d\u044b\u0439 "
-        "\u0437\u0430\u043a\u0430\u0437\u043d\u0438\u043a \u00ab\u0422\u0435\u043f\u043b\u044b\u0439 \u0421\u0442\u0430\u043d\u00bb, \u043f\u043e\u0434\u0432\u0435\u0434\u043e\u043c\u0441\u0442\u0432\u0435\u043d\u043d\u0443\u044e \u0413\u0410\u0423\u041a \u0433. \u041c\u043e\u0441\u043a\u0432\u044b \u00ab\u041f\u0430\u0440\u043a\u0438 \u041c\u043e\u0441\u043a\u0432\u044b\u00bb, \u0434\u043b\u044f "
-        "\u043f\u0440\u043e\u0435\u0437\u0434\u0430 \u043a \u043e\u0431\u044a\u0435\u043a\u0442\u0430\u043c, \u0440\u0430\u0441\u043f\u043e\u043b\u043e\u0436\u0435\u043d\u043d\u044b\u043c \u043f\u043e \u0430\u0434\u0440\u0435\u0441\u0443: \u0433. \u041c\u043e\u0441\u043a\u0432\u0430, \u0443\u043b. \u041e\u0441\u0442\u0440\u043e\u0432\u0438\u0442\u044f\u043d\u043e\u0432\u0430, \u0432\u043b.10., "
-        f"\u043d\u0430 {target_date_str} \u0433., \u0441\u043e\u0433\u043b\u0430\u0441\u043d\u043e \u043f\u0440\u0438\u043b\u0430\u0433\u0430\u0435\u043c\u043e\u0439 \u0441\u0445\u0435\u043c\u0435 \u0434\u0432\u0438\u0436\u0435\u043d\u0438\u044f \u0430\u0432\u0442\u043e\u0442\u0440\u0430\u043d\u0441\u043f\u043e\u0440\u0442\u0430."
+        "в соответствии с договором аренды объекта особо ценного движимого имущества "
+        "№ ОЦДИ-17, заключенным между ГПБУ «Мосприрода» и Автономной некоммерческой "
+        "Организацией Спортивный клуб «Олимпик» (ОГРН 1047796891570) 01.08.2018 г., "
+        "в целях выполнения разовых обязательств, прошу Вас дать разовые разрешение на "
+        "въезд транспортных средств на особо охраняемую зеленую территорию ландшафтный "
+        "заказник «Теплый Стан», подведомственную ГАУК г. Москвы «Парки Москвы», для "
+        "проезда к объектам, расположенным по адресу: г. Москва, ул. Островитянова, вл.10., "
+        f"на {target_date_str} г., согласно прилагаемой схеме движения автотранспорта."
     )
     run.font.size = Pt(12)
 
@@ -147,7 +150,7 @@ def generate_document(cars, target_date_str):
     p.paragraph_format.line_spacing = 1.15
     p.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
     p.paragraph_format.first_line_indent = Cm(1.27)
-    run = p.add_run("\u0418\u043d\u0444\u043e\u0440\u043c\u0430\u0446\u0438\u044f \u043e \u043c\u0430\u0440\u043a\u0430\u0445 \u0442\u0440\u0430\u043d\u0441\u043f\u043e\u0440\u0442\u043d\u044b\u0445 \u0441\u0440\u0435\u0434\u0441\u0442\u0432 \u0438 \u0433\u043e\u0441\u0443\u0434\u0430\u0440\u0441\u0442\u0432\u0435\u043d\u043d\u044b\u0445 \u0440\u0435\u0433\u0438\u0441\u0442\u0440\u0430\u0446\u0438\u043e\u043d\u043d\u044b\u0445 \u0437\u043d\u0430\u043a\u0430\u0445:")
+    run = p.add_run("Информация о марках транспортных средств и государственных регистрационных знаках:")
     run.font.size = Pt(12)
 
     doc.add_paragraph()
@@ -155,7 +158,7 @@ def generate_document(cars, target_date_str):
     table = doc.add_table(rows=1, cols=3)
     table.alignment = WD_TABLE_ALIGNMENT.CENTER
 
-    for i, h in enumerate(["\u2116", "\u041d\u043e\u043c\u0435\u0440 \u0430\u0432\u0442\u043e\u043c\u043e\u0431\u0438\u043b\u044f", "\u041c\u0430\u0440\u043a\u0430 \u0430\u0432\u0442\u043e\u043c\u043e\u0431\u0438\u043b\u044f"]):
+    for i, h in enumerate(["№", "Номер автомобиля", "Марка автомобиля"]):
         cell = table.rows[0].cells[i]
         cell.text = ""
         p = cell.paragraphs[0]
@@ -167,7 +170,7 @@ def generate_document(cars, target_date_str):
 
     for idx, car in enumerate(cars, 1):
         row = table.add_row()
-        for i, val in enumerate([str(idx), car["car_brand"], car["car_number"]]):
+        for i, val in enumerate([str(idx), car["car_number"], car["car_brand"]]):
             cell = row.cells[i]
             cell.text = ""
             p = cell.paragraphs[0]
@@ -188,10 +191,10 @@ def generate_document(cars, target_date_str):
     p.paragraph_format.line_spacing = 1.15
     p.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
     run = p.add_run(
-        f"\u0422\u0430\u043a\u0436\u0435 \u0441\u043e\u043e\u0431\u0449\u0430\u044e, \u0447\u0442\u043e \u0435\u0434\u0438\u043d\u043e\u0432\u0440\u0435\u043c\u0435\u043d\u043d\u043e \u043d\u0430 \u0442\u0435\u0440\u0440\u0438\u0442\u043e\u0440\u0438\u0438 \u043b\u0430\u043d\u0434\u0448\u0430\u0444\u0442\u043d\u043e\u0433\u043e \u0437\u0430\u043a\u0430\u0437\u043d\u0438\u043a\u0430 "
-        f"\u00ab\u0422\u0435\u043f\u043b\u044b\u0439 \u0421\u0442\u0430\u043d\u00bb \u043f\u043e \u0430\u0434\u0440\u0435\u0441\u0443 : \u0433. \u041c\u043e\u0441\u043a\u0432\u0430 \u0443\u043b. \u041e\u0441\u0442\u0440\u043e\u0432\u0438\u0442\u044f\u043d\u043e\u0432\u0430, \u0432\u043b.10, \u0437\u0430\u0435\u0437\u0434 "
-        f"\u0430\u0432\u0442\u043e\u043c\u043e\u0431\u0438\u043b\u0435\u0439 \u043d\u0435 \u0431\u0443\u0434\u0435\u0442 \u043f\u0440\u0435\u0432\u044b\u0448\u0430\u0442\u044c \u043a\u043e\u043b\u0438\u0447\u0435\u0441\u0442\u0432\u0430 {count} ({count_words}) \u0448\u0442\u0443\u043a, "
-        f"\u0430 \u0442\u0430\u043a\u0436\u0435 \u0431\u0443\u0434\u0443\u0442 \u0441\u043e\u0431\u043b\u044e\u0434\u0430\u0442\u044c\u0441\u044f \u0440\u0435\u0433\u043b\u0430\u043c\u0435\u043d\u0442"
+        f"Также сообщаю, что единовременно на территории ландшафтного заказника "
+        f"«Теплый Стан» по адресу : г. Москва ул. Островитянова, вл.10, заезд "
+        f"автомобилей не будет превышать количества {count} ({count_words}) штук, "
+        f"а также будут соблюдаться регламент"
     )
     run.font.size = Pt(12)
 
@@ -199,17 +202,17 @@ def generate_document(cars, target_date_str):
     p.paragraph_format.line_spacing = 1.15
     p.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
     run = p.add_run(
-        "\u043f\u043e\u0441\u0442\u0430\u043d\u043e\u0432\u043b\u0435\u043d\u0438\u044f \u041f\u0440\u0430\u0432\u0438\u0442\u0435\u043b\u044c\u0441\u0442\u0432\u0430 \u041c\u043e\u0441\u043a\u0432\u044b \u043e\u0442 14.09.2010 \u2116795-\u041f\u041f \u00ab\u041e\u0431 \u0443\u0442\u0432\u0435\u0440\u0436\u0434\u0435\u043d\u0438\u0438 "
-        "\u0420\u0435\u0433\u043b\u0430\u043c\u0435\u043d\u0442\u0430 \u043f\u043e\u0434\u0433\u043e\u0442\u043e\u0432\u043a\u0438 \u0438 \u0432\u044b\u0434\u0430\u0447\u0438 \u0437\u0430\u044f\u0432\u0438\u0442\u0435\u043b\u0435\u043c \u0414\u0435\u043f\u0430\u0440\u0442\u0430\u043c\u0435\u043d\u0442\u043e\u043c \u043f\u0440\u0438\u0440\u043e\u0434\u043e\u043f\u043e\u043b\u044c\u0437\u043e\u0432\u0430\u043d\u0438\u044f "
-        "\u0438 \u043e\u0445\u0440\u0430\u043d\u044b \u043e\u043a\u0440\u0443\u0436\u0430\u044e\u0449\u0435\u0439 \u0441\u0440\u0435\u0434\u044b \u0433\u043e\u0440\u043e\u0434\u0430 \u041c\u043e\u0441\u043a\u0432\u044b \u043d\u0430 \u0432\u044a\u0435\u0437\u0434 \u043d\u0430 \u043e\u0441\u043e\u0431\u043e \u043e\u0445\u0440\u0430\u043d\u044f\u0435\u043c\u044b\u0435 \u043f\u0440\u0438\u0440\u043e\u0434\u043d\u044b\u0435 "
-        "\u0442\u0435\u0440\u0440\u0438\u0442\u043e\u0440\u0438\u0438 \u0433\u043e\u0440\u043e\u0434\u0430 \u041c\u043e\u0441\u043a\u0432\u044b\u00bb, \u0430 \u0438\u043c\u0435\u043d\u043d\u043e:"
+        "постановления Правительства Москвы от 14.09.2010 №795-ПП «Об утверждении "
+        "Регламента подготовки и выдачи заявителем Департаментом природопользования "
+        "и охраны окружающей среды города Москвы на въезд на особо охраняемые природные "
+        "территории города Москвы», а именно:"
     )
     run.font.size = Pt(12)
 
     for bullet in [
-        "\u0432\u044a\u0435\u0437\u0434 \u0438 \u043f\u0435\u0440\u0435\u0434\u0432\u0438\u0436\u0435\u043d\u0438\u0435 \u0442\u0440\u0430\u043d\u0441\u043f\u043e\u0440\u0442\u043d\u044b\u0445 \u0441\u0440\u0435\u0434\u0441\u0442\u0432 \u043f\u043e \u041e\u041e\u0417\u0422 \u0432\u043d\u0435 \u0434\u043e\u0440\u043e\u0433 \u043e\u0431\u0449\u0435\u0433\u043e \u043f\u043e\u043b\u044c\u0437\u043e\u0432\u0430\u043d\u0438\u044f \u0431\u0443\u0434\u0435\u0442 \u043e\u0441\u0443\u0449\u0435\u0441\u0442\u0432\u043b\u044f\u0442\u044c\u0441\u044f \u043f\u043e \u0441\u0442\u0440\u043e\u0433\u043e \u0443\u0441\u0442\u0430\u043d\u043e\u0432\u043b\u0435\u043d\u043d\u044b\u043c \u043c\u0430\u0440\u0448\u0440\u0443\u0442\u0430\u043c (\u0442\u0435\u0445\u043d\u043e\u043b\u043e\u0433\u0438\u0447\u0435\u0441\u043a\u0438\u043c \u043a\u0430\u0440\u0442\u0430\u043c), \u0441\u043e\u0433\u043b\u0430\u0441\u043e\u0432\u0430\u043d\u043d\u044b\u043c \u0431\u0430\u043b\u0430\u043d\u0441\u043e\u0434\u0435\u0440\u0436\u0430\u0442\u0435\u043b\u0435\u043c \u0442\u0435\u0440\u0440\u0438\u0442\u043e\u0440\u0438\u0438 \u0413\u0410\u0423\u041a \u0433. \u041c\u043e\u0441\u043a\u0432\u044b \u00ab\u041f\u0430\u0440\u043a\u0438 \u041c\u043e\u0441\u043a\u0432\u044b\u00bb \u0438 \u0413\u0411\u0423 \u00ab\u041c\u043e\u0441\u043f\u0440\u0438\u0440\u043e\u0434\u0430\u00bb;",
-        "\u0432\u044a\u0435\u0437\u0434, \u043f\u0435\u0440\u0435\u0434\u0432\u0438\u0436\u0435\u043d\u0438\u0435 \u0442\u0440\u0430\u043d\u0441\u043f\u043e\u0440\u0442\u043d\u044b\u0445 \u0441\u0440\u0435\u0434\u0441\u0442\u0432 \u043f\u043e \u041e\u041e\u0417\u0422 \u0432\u043d\u0435 \u0443\u0441\u0442\u0430\u043d\u043e\u0432\u043b\u0435\u043d\u043d\u044b\u0445 \u043c\u0430\u0440\u0448\u0440\u0443\u0442\u043e\u0432, \u0430 \u0442\u0430\u043a \u0436\u0435 \u043e\u0441\u0442\u0430\u043d\u043e\u0432\u043a\u0430 \u0438 \u0441\u0442\u043e\u044f\u043d\u043a\u0430 \u0442\u0440\u0430\u043d\u0441\u043f\u043e\u0440\u0442\u043d\u044b\u0445 \u0441\u0440\u0435\u0434\u0441\u0442\u0432 \u0432\u043d\u0435 \u0443\u0441\u0442\u0430\u043d\u043e\u0432\u043b\u0435\u043d\u043d\u044b\u0445 \u043c\u0435\u0441\u0442 \u0431\u0443\u0434\u0435\u0442 \u0437\u0430\u043f\u0440\u0435\u0449\u0435\u043d\u0430;",
-        "\u041f\u0440\u043e\u0435\u0437\u0434 \u0431\u0443\u0434\u0435\u0442 \u043e\u0441\u0443\u0449\u0435\u0441\u0442\u0432\u043b\u044f\u0442\u044c\u0441\u044f \u043f\u043e \u0441\u0443\u0449\u0435\u0441\u0442\u0432\u0443\u044e\u0449\u0435\u0439 \u0434\u043e\u0440\u043e\u0436\u043d\u043e\u0439 \u0441\u0435\u0442\u0438 \u0441 \u0438\u0441\u043a\u043b\u044e\u0447\u0435\u043d\u0438\u0435\u043c \u0437\u0430\u0435\u0437\u0434\u0430 \u0430\u0432\u0442\u043e\u0442\u0440\u0430\u043d\u0441\u043f\u043e\u0440\u0442\u0430 \u043d\u0430 \u0442\u0435\u0440\u0440\u0438\u0442\u043e\u0440\u0438\u0438, \u0437\u0430\u043d\u044f\u0442\u044b\u0435 \u0437\u0435\u043b\u0435\u043d\u044b\u043c\u0438 \u043d\u0430\u0441\u0430\u0436\u0434\u0435\u043d\u0438\u044f\u043c\u0438.",
+        "въезд и передвижение транспортных средств по ООЗТ вне дорог общего пользования будет осуществляться по строго установленным маршрутам (технологическим картам), согласованным балансодержателем территории ГАУК г. Москвы «Парки Москвы» и ГБУ «Мосприрода»;",
+        "въезд, передвижение транспортных средств по ООЗТ вне установленных маршрутов, а так же остановка и стоянка транспортных средств вне установленных мест будет запрещена;",
+        "Проезд будет осуществляться по существующей дорожной сети с исключением заезда автотранспорта на территории, занятые зелеными насаждениями.",
     ]:
         p = doc.add_paragraph()
         p.paragraph_format.line_spacing = 1.15
@@ -221,9 +224,9 @@ def generate_document(cars, target_date_str):
     p.paragraph_format.line_spacing = 1.15
     p.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
     run = p.add_run(
-        "\u0422\u0430\u043a\u0436\u0435 \u0431\u0443\u0434\u0435\u0442 \u043e\u0441\u0443\u0449\u0435\u0441\u0442\u0432\u043b\u0435\u043d \u0432\u0438\u0434\u0435\u043e\u043a\u043e\u043d\u0442\u0440\u043e\u043b\u044c \u0430\u0432\u0442\u043e\u043c\u043e\u0431\u0438\u043b\u044c\u043d\u044b\u0445 \u043d\u043e\u043c\u0435\u0440\u043e\u0432 \u0432\u044a\u0435\u0437\u0436\u0430\u044e\u0449\u0435\u0433\u043e "
-        "\u043d\u0430 \u0442\u0435\u0440\u0440\u0438\u0442\u043e\u0440\u0438\u044e \u043b\u0430\u043d\u0434\u0448\u0430\u0444\u0442\u043d\u043e\u0433\u043e \u0437\u0430\u043a\u0430\u0437\u043d\u0438\u043a\u0430 \u00ab\u0422\u0435\u043f\u043b\u044b\u0439 \u0421\u0442\u0430\u043d\u00bb \u0430\u0432\u0442\u043e\u0442\u0440\u0430\u043d\u0441\u043f\u043e\u0440\u0442\u0430 \u043f\u043e \u0430\u0434\u0440\u0435\u0441\u0443: "
-        "\u0433. \u041c\u043e\u0441\u043a\u0432\u0430, \u0443\u043b. \u041e\u0441\u0442\u0440\u043e\u0432\u0438\u0442\u044f\u043d\u043e\u0432\u0430, \u0432\u043b.10."
+        "Также будет осуществлен видеоконтроль автомобильных номеров въезжающего "
+        "на территорию ландшафтного заказника «Теплый Стан» автотранспорта по адресу: "
+        "г. Москва, ул. Островитянова, вл.10."
     )
     run.font.size = Pt(12)
 
@@ -231,23 +234,23 @@ def generate_document(cars, target_date_str):
     doc.add_paragraph()
 
     p = doc.add_paragraph()
-    run = p.add_run("\u041f\u0440\u0435\u0434\u0441\u0435\u0434\u0430\u0442\u0435\u043b\u044c")
+    run = p.add_run("Председатель")
     run.font.size = Pt(12)
     p = doc.add_paragraph()
-    run = p.add_run("\u041f\u0440\u0430\u0432\u043b\u0435\u043d\u0438\u044f \u0410\u041d\u041e \u0421\u041a \u00ab\u041e\u041b\u0418\u041c\u041f\u0418\u041a\u00bb")
+    run = p.add_run("Правления АНО СК «ОЛИМПИК»")
     run.font.size = Pt(12)
     p = doc.add_paragraph()
     p.alignment = WD_ALIGN_PARAGRAPH.RIGHT
-    run = p.add_run("\u0410.\u041f. \u0414\u043c\u0438\u0442\u0440\u0438\u0435\u043d\u043a\u043e")
+    run = p.add_run("А.П. Дмитриенко")
     run.font.size = Pt(12)
 
     doc.add_paragraph()
 
     p = doc.add_paragraph()
-    run = p.add_run("\u0418\u0441\u043f\u043e\u043b\u043d\u0438\u0442\u0435\u043b\u044c")
+    run = p.add_run("Исполнитель")
     run.font.size = Pt(12)
     p = doc.add_paragraph()
-    run = p.add_run("\u041f\u0440\u0443\u0446\u043a\u043e\u0432 \u0418\u043b\u044c\u044f \u0415\u0432\u0433\u0435\u043d\u044c\u0435\u0432\u0438\u0447")
+    run = p.add_run("Пруцков Илья Евгеньевич")
     run.font.size = Pt(12)
     p = doc.add_paragraph()
     run = p.add_run("+79166571350")
@@ -257,7 +260,65 @@ def generate_document(cars, target_date_str):
     filename = f"Razovye_propuska_{date_fn}.docx"
     filepath = Path("/tmp") / filename
     doc.save(str(filepath))
-    logger.info(f"\u0414\u043e\u043a\u0443\u043c\u0435\u043d\u0442 \u0441\u043e\u0445\u0440\u0430\u043d\u0451\u043d: {filepath}")
+    logger.info(f"Документ (письмо) сохранён: {filepath}")
+    return filepath
+
+
+def generate_car_list(cars, target_date_str):
+    """Генерирует Word-документ с простым перечнем автомобилей."""
+    target_date = datetime.strptime(target_date_str, "%d.%m.%Y")
+
+    doc = Document()
+    style = doc.styles["Normal"]
+    style.font.name = "Times New Roman"
+    style.font.size = Pt(12)
+
+    # Заголовок
+    p = doc.add_paragraph()
+    p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    run = p.add_run(f"Перечень автомобилей на {target_date_str}")
+    run.bold = True
+    run.font.size = Pt(14)
+
+    doc.add_paragraph()
+
+    # Таблица
+    table = doc.add_table(rows=1, cols=3)
+    table.alignment = WD_TABLE_ALIGNMENT.CENTER
+
+    for i, h in enumerate(["№", "Марка автомобиля", "Номер автомобиля"]):
+        cell = table.rows[0].cells[i]
+        cell.text = ""
+        p = cell.paragraphs[0]
+        p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        run = p.add_run(h)
+        run.bold = True
+        run.font.size = Pt(11)
+        run.font.name = "Times New Roman"
+        set_cell_border(cell)
+
+    for idx, car in enumerate(cars, 1):
+        row = table.add_row()
+        for i, val in enumerate([str(idx), car["car_brand"], car["car_number"]]):
+            cell = row.cells[i]
+            cell.text = ""
+            p = cell.paragraphs[0]
+            p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+            run = p.add_run(val)
+            run.font.size = Pt(11)
+            run.font.name = "Times New Roman"
+            set_cell_border(cell)
+
+    for row in table.rows:
+        row.cells[0].width = Cm(1.5)
+        row.cells[1].width = Cm(7)
+        row.cells[2].width = Cm(7)
+
+    date_fn = target_date.strftime("%d_%m_%Y")
+    filename = f"Perechen_auto_{date_fn}.docx"
+    filepath = Path("/tmp") / filename
+    doc.save(str(filepath))
+    logger.info(f"Документ (перечень) сохранён: {filepath}")
     return filepath
 
 
@@ -287,9 +348,9 @@ def send_telegram_document(filepath, caption):
     resp = urllib.request.urlopen(req)
     result = json.loads(resp.read())
     if result.get("ok"):
-        logger.info(f"\u0424\u0430\u0439\u043b \u043e\u0442\u043f\u0440\u0430\u0432\u043b\u0435\u043d \u0432 Telegram: {filename}")
+        logger.info(f"Файл отправлен в Telegram: {filename}")
     else:
-        logger.error(f"\u041e\u0448\u0438\u0431\u043a\u0430 \u043e\u0442\u043f\u0440\u0430\u0432\u043a\u0438: {result}")
+        logger.error(f"Ошибка отправки: {result}")
         sys.exit(1)
 
 
@@ -301,34 +362,40 @@ def send_telegram_message(text):
     resp = urllib.request.urlopen(req)
     result = json.loads(resp.read())
     if result.get("ok"):
-        logger.info("\u0421\u043e\u043e\u0431\u0449\u0435\u043d\u0438\u0435 \u043e\u0442\u043f\u0440\u0430\u0432\u043b\u0435\u043d\u043e \u0432 Telegram")
+        logger.info("Сообщение отправлено в Telegram")
     else:
-        logger.error(f"\u041e\u0448\u0438\u0431\u043a\u0430 \u043e\u0442\u043f\u0440\u0430\u0432\u043a\u0438: {result}")
+        logger.error(f"Ошибка отправки: {result}")
 
 
 def main():
     if not BOT_TOKEN:
-        logger.error("BOT_TOKEN \u043d\u0435 \u0437\u0430\u0434\u0430\u043d")
+        logger.error("BOT_TOKEN не задан")
         sys.exit(1)
 
     now = datetime.now(TIMEZONE)
     tomorrow = now + timedelta(days=1)
     target_date_str = tomorrow.strftime("%d.%m.%Y")
 
-    logger.info(f"\u0413\u0435\u043d\u0435\u0440\u0430\u0446\u0438\u044f \u043f\u0440\u043e\u043f\u0443\u0441\u043a\u043e\u0432 \u043d\u0430 {target_date_str}")
+    logger.info(f"Генерация пропусков на {target_date_str}")
     cars = get_cars_for_date(target_date_str)
 
     if not cars:
-        msg = f"\u041d\u0430 {target_date_str} \u0437\u0430\u044f\u0432\u043e\u043a \u043d\u0430 \u043f\u0440\u043e\u043f\u0443\u0441\u043a\u0430 \u043d\u0435\u0442."
+        msg = f"На {target_date_str} заявок на проезд нет."
         logger.info(msg)
         send_telegram_message(msg)
         return
 
-    filepath = generate_document(cars, target_date_str)
-    caption = f"\u0420\u0430\u0437\u043e\u0432\u044b\u0435 \u043f\u0440\u043e\u043f\u0443\u0441\u043a\u0430 \u043d\u0430 {target_date_str}\n\u0410\u0432\u0442\u043e\u043c\u043e\u0431\u0438\u043b\u0435\u0439: {len(cars)}"
-    send_telegram_document(filepath, caption)
-    filepath.unlink(missing_ok=True)
-    logger.info("\u0413\u043e\u0442\u043e\u0432\u043e!")
+    # Документ 1: Официальное письмо
+    letter_path = generate_document(cars, target_date_str)
+    send_telegram_document(letter_path, f"📄 Письмо на разовый проезд на {target_date_str}\nАвтомобилей: {len(cars)}")
+    letter_path.unlink(missing_ok=True)
+
+    # Документ 2: Перечень автомобилей
+    list_path = generate_car_list(cars, target_date_str)
+    send_telegram_document(list_path, f"📋 Перечень автомобилей на {target_date_str}")
+    list_path.unlink(missing_ok=True)
+
+    logger.info("Готово! Оба документа отправлены.")
 
 
 if __name__ == "__main__":

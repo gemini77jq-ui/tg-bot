@@ -1,6 +1,6 @@
 """
 Автоматическая генерация разовых пропусков и отправка в Telegram.
-Запускается ежедневно в 23:30 МСК через GitHub Actions.
+Запускается ежедневно в 21:00 МСК через GitHub Actions.
 Генерирует два документа:
 1. Официальное письмо в ГБУ «Мосприрода»
 2. Перечень автомобилей (простая таблица)
@@ -40,7 +40,8 @@ logger = logging.getLogger(__name__)
 
 
 def get_cars_for_date(target_date):
-    """Получает из Google Sheets список авто на указанную дату."""
+    """Получает из Google Sheets список авто на указанную дату.
+    При дублировании гос. номера на одну дату берётся последняя заявка."""
     creds_json = os.environ.get("GOOGLE_CREDENTIALS")
     if not creds_json:
         logger.error("GOOGLE_CREDENTIALS не задана")
@@ -49,15 +50,20 @@ def get_cars_for_date(target_date):
     client = gspread.authorize(creds)
     sheet = client.open_by_key(SPREADSHEET_ID).worksheet(SHEET_NAME)
     records = sheet.get_all_records()
-    cars = []
+
+    # Словарь для дедупликации: ключ — гос. номер в верхнем регистре,
+    # значение — данные авто. Последняя запись перезаписывает предыдущую.
+    cars_by_number = {}
     for row in records:
         arrival = str(row.get("Дата прибытия", "")).strip()
         if arrival == target_date:
             brand = str(row.get("Марка", "")).strip()
             number = str(row.get("Гос. номер", "")).strip()
             if brand and number:
-                cars.append({"car_brand": brand, "car_number": number})
-    logger.info(f"Найдено {len(cars)} авто на {target_date}")
+                cars_by_number[number.upper()] = {"car_brand": brand, "car_number": number}
+
+    cars = list(cars_by_number.values())
+    logger.info(f"Найдено {len(cars)} уникальных авто на {target_date}")
     return cars
 
 

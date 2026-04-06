@@ -209,16 +209,6 @@ async def confirm(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     user = update.effective_user
     data = context.user_data
 
-    # Проверка дубликата по гос. номеру
-    if sheets.is_duplicate(data["car_number"]):
-        await update.message.reply_text(
-            f"⚠️ Автомобиль с номером *{data['car_number']}* уже зарегистрирован!\n\n"
-            "Если это ошибка, свяжитесь с администратором.",
-            parse_mode="Markdown",
-            reply_markup=ReplyKeyboardRemove(),
-        )
-        return ConversationHandler.END
-
     record = {
         "timestamp": datetime.now(ZoneInfo("Europe/Moscow")).strftime("%d.%m.%Y %H:%M"),
         "tg_id": str(user.id),
